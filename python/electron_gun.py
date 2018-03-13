@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-file: generate_images.py
+   file: electron_gun.py
+   Choose the energy of the electron and generate images
 """
 from keras.layers import (Activation, AveragePooling2D, BatchNormalization,
                           Conv2D, Dense, Input, Lambda, LeakyReLU,
@@ -71,12 +72,36 @@ def generator_outputs(inputs, sizes):
     one2two = AveragePooling2D(pool_size=(1, 2))(img_layer1)
     img_layer2 = inpainting_attention(img_layer2, one2two)
 
-    outputs = [
-        Activation('relu')(img_layer0),
-        Activation('relu')(img_layer1),
-        Activation('relu')(img_layer2)]
+    outputs = [Activation('relu')(img_layer0),
+               Activation('relu')(img_layer1),
+               Activation('relu')(img_layer2)]
 
     return outputs
+
+
+def generate_images(batch_size, latent_size, energy, generator, fname):
+    '''
+    Args:
+    -----
+        batch_size: int, number of images to generate
+        latent_size: int, dimention of the latent vector
+        energy: float, energy of the particle
+        generator: Keras model
+        fname> str, prefix for the output images
+    '''
+    noise = np.random.normal(0, 1, (batch_size, latent_size))
+    energy_array = np.array([[energy]], dtype=float)
+    images = generator.predict([noise, energy_array])
+
+    images = map(lambda x: np.squeeze(x * 1000), images)
+
+    for i, img in enumerate(images):
+        plot_image(img, sizes, layer=i,
+                   vmin=max(img.mean(axis=0).min(), 1.e-3),
+                   vmax=img.mean(axis=0).max())
+
+        out = 'images/{}_{}_layer_{}.pdf'.format(fname, str(int(energy)), i)
+        plt.savefig(out, transparent=True)
 
 
 def plot_image(image, sizes, layer, vmin=None, vmax=None):
@@ -111,31 +136,20 @@ def plot_image(image, sizes, layer, vmin=None, vmax=None):
 
 
 if __name__ == '__main__':
-    energy = np.array([[100.]])  # GeV
     batch_size = 1
     latent_size = 1024
     sizes = [3, 96, 12, 12, 12, 6]
-    idx = 0
-    epochs = ['000', '010', '020', '030', '040', '049']
 
-    matplotlib.rcParams.update({'font.size': 50})
+    matplotlib.rcParams.update({'font.size': 50})  # Cosmetics
 
     inputs = generator_inputs(latent_size)
     outputs = generator_outputs(inputs, sizes)
     generator = Model(inputs, outputs)
 
-    generator.load_weights(
-            'weights/params_generator_epoch_{}.hdf5'.format(epochs[idx]))
+    energy = 50  # GeV
 
-    # print(generator.summary())
+    generate_images(batch_size, latent_size, energy, generator, 'backg')
 
-    noise = np.random.normal(0, 1, (batch_size, latent_size))
-    generated_images = generator.predict([noise, energy])
-    generated_images = map(lambda x: np.squeeze(x * 1000), generated_images)
+    generator.load_weights('weights/params_generator_epoch_049.hdf5')
 
-    for i, img in enumerate(generated_images):
-        plot_image(img, sizes, layer=i,
-                   vmin=max(img.mean(axis=0).min(), 1.e-1),
-                   vmax=img.mean(axis=0).max())
-        plt.savefig('pdf/epoch_{}_layer_{}.pdf'.format(epochs[idx], i),
-                    transparent=True)
+    generate_images(batch_size, latent_size, energy, generator, 'signal')
