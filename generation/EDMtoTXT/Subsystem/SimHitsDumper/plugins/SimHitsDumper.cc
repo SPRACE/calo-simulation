@@ -34,6 +34,7 @@
 #include "DataFormats/DetId/interface/DetIdCollection.h"
 #include "DataFormats/EcalDetId/interface/EBDetId.h"
 #include "SimDataFormats/CaloHit/interface/PCaloHitContainer.h"
+#include "Subsystem/SimHitsDumper/interface/json.hpp"
 
 //
 // class declaration
@@ -57,12 +58,14 @@ class SimHitsDumper : public edm::one::EDAnalyzer<>  {
       virtual void beginJob() override;
       virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
       virtual void endJob() override;
-  const size_t numCrystals = 6*360;
-  const size_t offsetIndex = 29520;
+    
+      // ----------member data ---------------------------
+  const size_t numCrystals = 85*2*360;
+  const size_t offsetIndex = 0; //29520;
   std::vector<double> crystalMap;
   edm::EDGetTokenT<edm::PCaloHitContainer> theCaloHitsToken;
   std::ofstream myfile;
-      // ----------member data ---------------------------
+  double energyThreshold_;
 };
 
 //
@@ -81,6 +84,7 @@ SimHitsDumper::SimHitsDumper(const edm::ParameterSet& iConfig)
 {
    //now do what ever initialization is needed
     theCaloHitsToken = consumes<edm::PCaloHitContainer>(iConfig.getParameter<edm::InputTag>("theCaloHits"));
+    energyThreshold_ = iConfig.getParameter<double>("energyThreshold");
     crystalMap.reserve(numCrystals);
     crystalMap.resize(numCrystals);
     myfile.open("output.txt");
@@ -105,7 +109,8 @@ void
 SimHitsDumper::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
    using namespace edm;
-   
+   using json = nlohmann::json;
+
    std::fill(crystalMap.begin(),crystalMap.end(),0.0);
 
    // vector<PCaloHit> "g4SimHits"  "EcalHitsEB"  "SIM"
@@ -114,15 +119,15 @@ SimHitsDumper::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
    /// What are the minimum/maximum dense indexes that I want?
    /// I want ieta from -3 to 3, iphi from 1 to 360
-   // std::cout << EBDetId(-3, 1).numberByEtaPhi() << std::endl;
-   // std::cout << EBDetId(-3, 360).numberByEtaPhi() << std::endl;
-   // std::cout << EBDetId(-2, 1).numberByEtaPhi() << std::endl;
+   // std::cout << EBDetId(-85, 1).numberByEtaPhi() << std::endl;
+   // std::cout << EBDetId(-85, 360).numberByEtaPhi() << std::endl;
+   // std::cout << EBDetId(-1, 1).numberByEtaPhi() << std::endl;
    // std::cout << EBDetId(-1, 360).numberByEtaPhi() << std::endl;
    // std::cout << EBDetId(1, 1).numberByEtaPhi() << std::endl;
    // std::cout << EBDetId(3, 1).numberByEtaPhi() << std::endl;
-   // std::cout << EBDetId(3, 360).numberByEtaPhi() << std::endl;
+   // std::cout << EBDetId(85, 360).numberByEtaPhi() << std::endl;
    //29520 29879 29880 30599 30600 31320 31679
-   std::cout << "Found " << pCaloHits->size() << " CaloHits" << std::endl;
+   // std::cout << "Found " << pCaloHits->size() << " CaloHits" << std::endl;
 
    size_t maxCaloHit = 0;
    double maxEnergy = 0;
@@ -140,17 +145,24 @@ SimHitsDumper::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
        size_t convIndex = denseIndex - offsetIndex;
        crystalMap.at(convIndex) += hitEnergy;
      }
-            /// Maximum caloHit
+
+     /// Maximum caloHit
      const PCaloHit& mch = pCaloHits->at(maxCaloHit);
      int32_t maxRawid = mch.id();
      EBDetId maxEbDetId(maxRawid);
    }
    
-   std::cout << "Total energy = " << std::accumulate(crystalMap.begin(), crystalMap.end(), 0.0) << std::endl;
-   for(auto i = crystalMap.begin(); i != crystalMap.end(); ++i) {
-     myfile << *i << '\t';
+   // std::cout << "Total energy = " << std::accumulate(crystalMap.begin(), crystalMap.end(), 0.0) << std::endl;
+
+   json thisEvent;
+
+   for(size_t i = 0; i != crystalMap.size(); ++i) {
+     double energyValue = crystalMap.at(i);
+     if(energyValue > energyThreshold_) {
+       thisEvent[std::to_string(i)] = energyValue; 
+     }
    }
-   myfile << std::endl;
+   myfile << thisEvent << std::endl;
 }
 
 
