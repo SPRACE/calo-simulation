@@ -1,5 +1,5 @@
 """
-    Deploy tf.data.Dataset to iterate over JSON file
+    Create tf.data.Dataset to iterate over JSON file
 """
 
 import json
@@ -26,12 +26,10 @@ def dict_to_sparse_tensor(line):
 
 def create_dataset(json_file):
     """ Create dataset from JSON file
-        taking care of null values
     """
     with open(json_file, 'r') as f:
         content = f.readlines()
 
-    content = [x for x in content if x != 'null\n']
     content = [dict_to_sparse_tensor(x) for x in content]
 
     dataset = tf.sparse_concat(axis=0, sp_inputs=content)
