@@ -1,13 +1,13 @@
 """
     Create tf.data.Dataset to iterate over JSON file
 
-    Calculate sparsisty defined as:
+    Calculate sparsity defined as:
 
           sparsity = zero_elements / total_elements
 
                    = 1 - non_zero_elements / total_elements
 
-    On top of that, profiles the memory comsuption as function of time
+    On top of that, profiles the memory comsuption
 """
 
 import json
@@ -59,6 +59,9 @@ def split_json(json_file, n):
 
 @profile
 def calculate_sparsity(dataset):
+    """ Given a tf.data.Dataset, creates an iterator
+        and runs over it to calculate the sparsity
+    """
     iterator = dataset.make_one_shot_iterator()
     next_element = iterator.get_next()
     with tf.Session() as sess:
