@@ -47,13 +47,16 @@ def create_dataset(sublist):
 
 
 def split_json(json_file, n):
-    """ Create successive n-sized datasets """
     with open(json_file, 'r') as f:
         content = f.readlines()
-
-    sublists = [content[i:i+n] for i in range(0, len(content), n)]
-    datasets = map(create_dataset, sublists)
-    return datasets
+    """ Create successive n-sized datasets
+    """
+    m = len(content)
+    if n < m:
+        sublists = [content[i:i+n] for i in range(0, m, n)]
+        datasets = map(create_dataset, sublists)
+        return datasets
+    return map(create_dataset, [content])
 
 
 @profile
@@ -81,12 +84,13 @@ if __name__ == '__main__':
     name = 'eminus_Ele-Eta0-PhiPiOver2-Energy50.json'
     json_file = os.path.join(path, name)
 
-    """ Create datasets
+    """ Create datasets of a given size
     """
-    size_of_dataset = 1000
+    size_of_dataset = 21000
+    assert size_of_dataset > 0, f'{size_of_dataset} is not greater than zero'
     datasets = split_json(json_file, size_of_dataset)
 
-    """ Iterate over datasets and calculate sparsity
+    """ Iterate over datasets and calculate the sparsity.
         The results are saved in an output file
     """
     calculate_sparsity(datasets)
