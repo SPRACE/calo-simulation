@@ -4,10 +4,9 @@
     Calculate sparsity defined as:
 
           sparsity = zero_elements / total_elements
-
                    = 1 - non_zero_elements / total_elements
 
-    On top of that, profiles the memory comsuption
+    On top of that, profiles the memory consumption
 """
 
 import json
@@ -58,25 +57,27 @@ def split_json(json_file, n):
 
 
 @profile
-def calculate_sparsity(dataset):
-    """ Given a tf.data.Dataset, creates an iterator
-        and runs over it to calculate the sparsity
-    """
-    iterator = dataset.make_one_shot_iterator()
-    next_element = iterator.get_next()
-    with tf.Session() as sess:
-        while True:
-            try:
-                image = sess.run(next_element)
-                non_zero_elements = len(image.values)
-                sparsity = 1 - non_zero_elements/total_elements
-                print(sparsity)
-            except tf.errors.OutOfRangeError:
-                break
+def calculate_sparsity(datasets):
+    with open('sparsity.txt', 'w') as out:
+        for dataset in datasets:
+            """ Creates an iterator
+                Calculate the sparsity
+            """
+            iterator = dataset.make_one_shot_iterator()
+            next_element = iterator.get_next()
+            with tf.Session() as sess:
+                while True:
+                    try:
+                        image = sess.run(next_element)
+                        non_zero_elements = len(image.values)
+                        sparsity = 1 - non_zero_elements/total_elements
+                        print('{0:6f}'.format(sparsity), file=out)
+                    except tf.errors.OutOfRangeError:
+                        break
 
 
 if __name__ == '__main__':
-    path = '/Users/jose/Work/jet-images/data'
+    path = '/home/jose/work/jet-images/data'
     name = 'eminus_Ele-Eta0-PhiPiOver2-Energy50.json'
     json_file = os.path.join(path, name)
 
@@ -86,6 +87,6 @@ if __name__ == '__main__':
     datasets = split_json(json_file, size_of_dataset)
 
     """ Iterate over datasets and calculate sparsity
+        The results are saved in an output file
     """
-    for dataset in datasets:
-        calculate_sparsity(dataset)
+    calculate_sparsity(datasets)
