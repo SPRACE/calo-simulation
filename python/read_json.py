@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
     Create tf.data.Dataset to iterate over JSON file
 
@@ -7,14 +9,24 @@
                    = 1 - non_zero_elements / total_elements
 
     On top of that, profiles the memory consumption
+
+    Usage:
+
+          mprof run -T 2 read_json.py --size_of_dataset 2089
 """
 
 import json
 import numpy as np
 import os
 import tensorflow as tf
+from absl import flags
 
-from memory_profiler import profile
+
+flags.DEFINE_integer("size_of_dataset",
+                     default=1000,
+                     help="Size of the split datasets")
+FLAGS = flags.FLAGS
+
 
 total_elements = 61200
 
@@ -60,8 +72,8 @@ def split_json(json_file, n):
 
 
 @profile
-def calculate_sparsity(datasets):
-    with open('sparsity.txt', 'w') as out:
+def calculate_sparsity(datasets, n):
+    with open(f'sparsity_{n}.txt', 'w') as out:
         for dataset in datasets:
             """ Creates an iterator
                 Calculate the sparsity
@@ -79,18 +91,23 @@ def calculate_sparsity(datasets):
                         break
 
 
-if __name__ == '__main__':
-    path = '/home/jose/work/jet-images/data'
+def main(argv):
+    del argv  # unused
+    path = '/home/jruizvar/private/work/jet-images/data'
     name = 'eminus_Ele-Eta0-PhiPiOver2-Energy50.json'
     json_file = os.path.join(path, name)
 
     """ Create datasets of a given size
     """
-    size_of_dataset = 21000
-    assert size_of_dataset > 0, f'{size_of_dataset} is not greater than zero'
+    size_of_dataset = FLAGS.size_of_dataset
+    assert size_of_dataset > 0, f'{size_of_dataset} should be greater than 0'
     datasets = split_json(json_file, size_of_dataset)
 
     """ Iterate over datasets and calculate the sparsity.
         The results are saved in an output file
     """
-    calculate_sparsity(datasets)
+    calculate_sparsity(datasets, size_of_dataset)
+
+
+if __name__ == '__main__':
+    tf.app.run(main)
