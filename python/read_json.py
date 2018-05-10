@@ -71,7 +71,6 @@ def split_json(json_file, n):
     return map(create_dataset, [content])
 
 
-@profile
 def calculate_sparsity(datasets, n):
     with open(f'sparsity_{n}.txt', 'w') as out:
         for dataset in datasets:
