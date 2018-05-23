@@ -23,7 +23,8 @@ process.printTree = cms.EDAnalyzer("ParticleListDrawer",
 )
 
 process.demo = cms.EDAnalyzer('SimHitsDumper',
-                              theCaloHits = cms.InputTag("g4SimHits","EcalHitsEB")
+                              theCaloHits = cms.InputTag("g4SimHits","EcalHitsEB"),
+                              energyThreshold = cms.double(0.01)
                               )
 
 
