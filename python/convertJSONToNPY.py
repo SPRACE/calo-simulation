@@ -1,20 +1,20 @@
-
 # coding: utf-8
 
-# In[1]:
-
-
 import json
+from math import sqrt
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
+import matplotlib.colors as colors
 
-
-# In[2]:
+### Basic definitions
+SIZEOFREDUCEDSAMPLE = 28
+CENTERETA = 86  # Depends on convention
+CENTERPHI = 101  # Depends on convention
 
 
 def distanceEta(ieta1, ieta2):
+    # FIXME: make this function work with CMS convention
     deta = 0
     if ieta1 * ieta2 > 0:  # Okay, they are on the same side of eta
         deta = ieta1 - ieta2
@@ -24,17 +24,12 @@ def distanceEta(ieta1, ieta2):
     return deta
 
 
-# In[3]:
-
-
 def distancePhi(iphi1, iphi2):
+    # FIXME: make this function work with CMS convention
     dphi = 0
     thisSign = np.sign(iphi1 - iphi2)
     dphi = thisSign * (abs(iphi1 - iphi2) % 360)
     return dphi
-
-
-# In[4]:
 
 
 def convertCrystalNumberToEtaPhi(CRYSTALNUMBER, CMSConvention):
@@ -61,21 +56,28 @@ def convertCrystalNumberToEtaPhi(CRYSTALNUMBER, CMSConvention):
         if SIGN < 0:
             IETA = (i + 1 - IPHI) // 360 - 85
     else:
-        IETA = (i + 1 - IPHI) // 360
+        """
+        If we don't follow the CMS convention,
+        IETA goes from 1 to 170
+        IPHI goes from 1 to 360
+        """
+        IETA = (i - IPHI) // 360 + 2
     # print(i,IETA,IPHI)
     return (IETA, IPHI)
 
 
-# In[5]:
+# Use only for tests
+# for i in range(0,61200,1): print(i,convertCrystalNumberToEtaPhi(i,False))
 
 
-def convertEvent(thisEvent):
+def convertEvent(thisEvent, centerEta, centerPhi, numEta, numPhi):
 
-    centerEta = 85
-    centerPhi = 100
+    radiusEta = (numEta - 1) // 2
+    radiusPhi = (numPhi - 1) // 2
     npEta = 0
     npPhi = 0
-    reducedEvent = np.zeros((28, 28))
+
+    reducedEvent = np.zeros((numEta, numPhi))
 
     # print(thisEvent)
     thisEventJSON = json.loads(thisEvent)
@@ -86,54 +88,71 @@ def convertEvent(thisEvent):
         # print((ieta,iphi),thisEventJSON[key])
         deta = distanceEta(ieta, centerEta)
         dphi = distancePhi(iphi, centerPhi)
-        if abs(deta) > 13 or abs(dphi) > 13:
+        if abs(deta) > radiusEta or abs(dphi) > radiusPhi:
             continue
-        npEta = 14 + deta
-        npPhi = 14 + dphi
-
+        npEta = radiusEta + deta
+        npPhi = radiusPhi + dphi
         # print("deta is",deta,"dphi is",dphi)
-        try:
-            reducedEvent[npPhi][npEta] = thisEventJSON[key]
-        except indexError:
-            0
+        reducedEvent[npEta][npPhi] = thisEventJSON[key]
 
     return reducedEvent
 
 
-# In[6]:
+def convert(filename, signal, centerEta, centerPhi):
 
-
-def convert(real_signal):
-
-    filename = "eminus_Ele-Eta0-PhiPiOver2-Energy50.json"
+    numEvents = 0
+    listOfSignals = []
     # First we open the file
     with open(filename, "r") as f:
         content = f.readlines()
         numEvents = len(content)
-        print(numEvents)
         for i in range(0, numEvents):
             if i % 1000 == 0:
                 print(i)
             thisEvent = content[i]
-            reducedEvent = convertEvent(thisEvent)
-            real_signal[0, :, :] += reducedEvent[:, :]
+            try:
+                reducedEvent = convertEvent(
+                    thisEvent, centerEta, centerPhi, signal.shape[0], signal.shape[1]
+                )
+                listOfSignals.append(reducedEvent)
+            except indexError:
+                0
+    print("Converted", len(listOfSignals), "out of", numEvents, "events")
+    return listOfSignals
 
 
-# In[7]:
+signal = np.zeros((SIZEOFREDUCEDSAMPLE, SIZEOFREDUCEDSAMPLE))
+listOfSignals = convert(
+    "eminus_Ele-Eta0-PhiPiOver2-Energy50.json", signal, CENTERETA, CENTERPHI
+)
 
+arrayOfSignals = np.array(listOfSignals)
+arrayOfSignals.shape
 
-real_signal = np.zeros((1, 28, 28))
-convert(real_signal)
+np.save("test.npy", arrayOfSignals, allow_pickle=False)
 
+# # Daqui pra baixo é só validação e plotagem
 
-# In[8]:
-
-
-real_signal_toplot = np.log1p(real_signal / 21000)
+arrayOfSignals.sum(axis=0) / arrayOfSignals.shape[0]  # average
 fig = plt.figure()
-plt.imshow(real_signal_toplot[0, :, :])
+plt.imshow(signal_toplot[:, :], norm=colors.LogNorm(), vmin=1E-2, vmax=10)
 cbar = plt.colorbar()
 cbar.ax.set_ylabel("Energy [GeV]", rotation=270, fontsize=18, labelpad=25)
 plt.xlabel("ϕ", fontsize=16)
 plt.ylabel("η", fontsize=16)
 plt.show()
+
+
+sumOfEnergies = []
+for s in range(0, arrayOfSignals.shape[0]):
+    sumOfEnergy = arrayOfSignals[s].sum(axis=0).sum(axis=0)
+    # print(sumOfEnergy)
+    sumOfEnergies.append(sumOfEnergy)
+print(len(sumOfEnergies))
+
+print(
+    "Mean energy =",
+    np.mean(sumOfEnergies),
+    "+-",
+    np.std(sumOfEnergies) / sqrt(len(sumOfEnergies)),
+)
