@@ -11,3 +11,9 @@ def mean_eta(data):
 def mean_phi(data):
     return mean_component(data, axis=2)
                
+    
+def sum_energy(data):
+    if len(data.shape) == 2:
+        return np.sum(data, axis=(0,1))
+    else:
+        return np.sum(data, axis=(1,2))
