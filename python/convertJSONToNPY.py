@@ -1,5 +1,6 @@
 # coding: utf-8
 
+import sys
 import json
 from math import sqrt
 import numpy as np
@@ -8,7 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 
 ### Basic definitions
-SIZEOFREDUCEDSAMPLE = 28
+SIZEOFREDUCEDSAMPLE = int(sys.argv[1])
 CENTERETA = 86  # Depends on convention
 CENTERPHI = 101  # Depends on convention
 
@@ -133,15 +134,14 @@ np.save("test.npy", arrayOfSignals, allow_pickle=False)
 
 # # Daqui pra baixo é só validação e plotagem
 
-arrayOfSignals.sum(axis=0) / arrayOfSignals.shape[0]  # average
-fig = plt.figure()
-plt.imshow(signal_toplot[:, :], norm=colors.LogNorm(), vmin=1E-2, vmax=10)
-cbar = plt.colorbar()
-cbar.ax.set_ylabel("Energy [GeV]", rotation=270, fontsize=18, labelpad=25)
-plt.xlabel("ϕ", fontsize=16)
-plt.ylabel("η", fontsize=16)
-plt.show()
-
+#arrayOfSignals.sum(axis=0) / arrayOfSignals.shape[0]  # average
+#fig = plt.figure()
+#plt.imshow(signalt[:, :], norm=colors.LogNorm(), vmin=1E-2, vmax=10)
+#cbar = plt.colorbar()
+#cbar.ax.set_ylabel("Energy [GeV]", rotation=270, fontsize=18, labelpad=25)
+#plt.xlabel("ϕ", fontsize=16)
+#plt.ylabel("η", fontsize=16)
+#plt.show()
 
 sumOfEnergies = []
 for s in range(0, arrayOfSignals.shape[0]):

@@ -21,7 +21,7 @@ def plot_hist(data):
     plt.xlabel("ϕ", fontsize=16)
     plt.ylabel("η", fontsize=16)
     plt.show()
-    
+    return fig
     
 def plot_cumulative(data, xlabel="", ylabel="", legend=""):
     """Function to plot a line chart representing the eta and phi components

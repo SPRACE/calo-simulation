@@ -40,6 +40,7 @@ def dict_to_sparse_tensor(line):
         Then, the sparse tensor is reshaped to [1, 170, 360]
     """
     d = json.loads(line)
+    print(d)
     indices, values = zip(*[(int(k), float(v)) for k, v in d.items()])
 
     st = tf.SparseTensor(indices=np.array(indices)[:, np.newaxis],
@@ -91,8 +92,8 @@ def calculate_sparsity(datasets, n):
 
 
 def main(argv):
-    del argv  # unused
-    path = '/home/jruizvar/private/work/jet-images/data'
+    #del argv  # unused
+    path = '.'
     name = 'eminus_Ele-Eta0-PhiPiOver2-Energy50.json'
     json_file = os.path.join(path, name)
 
