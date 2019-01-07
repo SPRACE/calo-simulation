@@ -4,6 +4,12 @@ import sys
 
 sys.path.append("../python/lib/")
 
+print(sys.argv[1])
+window = sys.argv[1]
+window_num = int(window)
+out_filename = "synthetic_eminus_Energy50_SimpleNetwork_4x64_size"+window+"x"+window+".npy"
+print(out_filename)
+
 import keras
 from keras import layers
 from keras import backend as K
@@ -13,11 +19,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 ### Technical cuts
-img_shape = (28, 28, 1)
+original_dim = (28, 28, 1)
 batch_size = 100
-original_dim = img_shape[0]*img_shape[1]
-latent_dim = 3  # Latent space dimensions
-intermediate_dim = 512
+latent_dim = 2  # Latent space dimensions
+intermediate_dim = 64
 nb_epoch = 10
 validation_fraction = 0.2
 
@@ -28,7 +33,14 @@ energyCut = 35.0  # GeV
 name = "eminus_Ele-Eta0-PhiPiOver2-Energy50_28x28.npy"
 data = np.load(name)
 print(data.shape)
-print(original_dim)
+
+# TRIM the images
+target_shape = (window_num, window_num, 1)
+trim_begin = int(np.floor((original_dim[0] - target_shape[0])/2))
+trim_end = int(np.floor((target_shape[0] - original_dim[0])/2))
+data = data[:,trim_begin:trim_end,trim_begin:trim_end]
+img_shape = target_shape
+print(data.shape)
 
 # importing generate function from lib util
 from util import generate
@@ -171,7 +183,7 @@ limit_i = 145
 limit_j = 145
 signal_counter = 0
 
-partial_signals = np.zeros((limit_i * limit_j, 28, 28))
+partial_signals = np.zeros((limit_i * limit_j, target_shape[0], target_shape[1]))
 print(partial_signals.shape)
 for i in range(limit_i):
     for j in range(limit_j):
@@ -180,7 +192,7 @@ for i in range(limit_i):
         z_sample = np.array([[i, j]])
         z_sample = np.tile(z_sample, batch_size).reshape(batch_size, latent_dim)
         x_decoded = decoder.predict(z_sample, batch_size=batch_size)
-        partial_signals[signal_counter, :, :] = x_decoded[0].reshape(28, 28)
+        partial_signals[signal_counter, :, :] = x_decoded[0].reshape(target_shape[0], target_shape[1])
         signal_counter = signal_counter + 1
 
 mean_synthetic_signal = np.mean(partial_signals, axis=0)
@@ -189,4 +201,4 @@ print("Average Energy: " + str(np.mean(syntheticEnergyArray)))
 print("Maximum Energy: " + str(np.max(syntheticEnergyArray)))
 print("Minimum Energy: " + str(np.min(syntheticEnergyArray)))
 
-np.save("syntethic_signals.npy", partial_signals, allow_pickle=False)
+np.save(out_filename, partial_signals, allow_pickle=False)
